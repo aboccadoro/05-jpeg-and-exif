@@ -6,10 +6,24 @@ class ExifParseError(Exception):
 
 
 def carve(f, start, end):
-    # return the bytes
-
-    # here is an example that just returns the entire range of bytes:
-    return f.read()
+    data = b''
+    offset = 0
+    while offset <= start:
+        chunk = f.read(256)
+        offset += 256
+        if offset >= start:
+            if end - start < 256:
+                data = chunk[(start % 256):((end % 256)+1)]
+            else:
+                data += chunk
+                while offset <= end:
+                    chunk = f.read(256)
+                    offset += 256
+                    if offset >= end:
+                        data += chunk[0:((end % 256)+1)]
+                    else:
+                        data += chunk
+    return data
 
 
 def find_jfif(f, max_length=None):
