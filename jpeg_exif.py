@@ -13,14 +13,14 @@ def carve(f, start, end):
         offset += 256
         if offset >= start:
             if end - start < 256:
-                data = chunk[(start % 256):((end % 256)+1)]
+                data = chunk[(start % 256):((end % 256) + 1)]
             else:
-                data += chunk
+                data += chunk[(start % 256):256]
                 while offset <= end:
                     chunk = f.read(256)
                     offset += 256
                     if offset >= end:
-                        data += chunk[0:((end % 256)+1)]
+                        data += chunk[0:((end % 256) + 1)]
                     else:
                         data += chunk
     return data
