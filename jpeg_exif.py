@@ -31,16 +31,7 @@ def find_jfif(f, max_length=None):
     offset = 0
     chunk = b''
     while True:
-        if max_length != None:
-            if offset + 256 > max_length: 
-                if max_length % 256 == 0:
-                    chunk = f.read(256)
-                else:
-                    chunk = f.read(max_length % 256)
-            else:
-                chunk = f.read(256)
-        else:
-            chunk = f.read(256)
+        chunk = f.read(256)
         if chunk == b'': break
         end = ((len(chunk) - 1) % 256) + 1
         for i in range(0, end):
@@ -51,8 +42,9 @@ def find_jfif(f, max_length=None):
                     offsets += [(offset, next_byte)]
                 elif next_byte == '0xd9':
                     offsets += [(offset + 1, next_byte)]
-            elif first_byte == '0xff' and i + 1 >= end:
+            elif first_byte == '0xff' and i + 1 == end:
                 seek = f.read(1)
+                offset += 1
                 if seek != b'':
                     next_byte = hex(seek[0])
                     if next_byte == '0xd8':
@@ -60,8 +52,27 @@ def find_jfif(f, max_length=None):
                     elif next_byte == '0xd9':
                         offsets += [(offset + 1, next_byte)]
             offset += 1
-    for item in offsets:
-        print(item)
+    results = []
+    offsets_length = len(offsets)
+    if max_length != None:
+        for i in range(0, offsets_length):
+            soi = offsets[i]
+            if soi[1] == '0xd8' and i + 1 <= offsets_length:
+                for j in range(i + 1, offsets_length):
+                    eoi = offsets[j]
+                    if eoi[1] == '0xd9' and eoi[0] - soi[0] < max_length:
+                        results += [(soi[0], eoi[0])]
+                    elif eoi[1] == '0xd9' and eoi[0] - soi[0] >= max_length:
+                        break
+    else:
+        for i in range(0, offsets_length):
+            soi = offsets[i]
+            if soi[1] == '0xd8' and i + 1 <= offsets_length:
+                for j in range(i + 1, offsets_length):
+                    eoi = offsets[j]
+                    if eoi[1] == '0xd9':
+                        results += [(soi[0], eoi[0])]
+    return results
 
 
 def parse_exif(f):
@@ -73,7 +84,7 @@ def parse_exif(f):
     return {'Make':['Apple']}
 
 def main():
-    find_jfif(open("gore-superman.jpg", 'rb'))
+    find_jfif(open("Designs.doc", 'rb'))
 
 if __name__ == '__main__':
     main()
