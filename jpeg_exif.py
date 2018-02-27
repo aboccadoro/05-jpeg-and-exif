@@ -1,5 +1,6 @@
 import tags
 import struct
+import json
 
 class ExifParseError(Exception):
     def __init__(self, message):
@@ -115,10 +116,15 @@ def parse_exif(f):
                     if components == b'': raise ExifParseError("Invalid Exif")
                     components = struct.unpack(">L", components[0:4])[0]
                     data = f.read(4)
+                    if not skip and type_format in (6, 8, 9, 10, 11, 12):
+                        exif[name] = None
                     if components != 0 and type_format not in (6, 8, 9, 10, 11, 12) and not skip:
                         if type_format == 1:
                             data = struct.unpack(">B", data[3:4])[0]
-                            exif[name] = [data]
+                            try:
+                                exif[name].append(data)
+                            except KeyError:
+                                exif[name] = [data]
                         elif type_format == 2:
                             if components > 4:
                                 offset = struct.unpack(">L", data[0:4])[0]
@@ -128,7 +134,10 @@ def parse_exif(f):
                                 f.seek(pos, 0)
                             else: data = bytes.decode(data[0:components])
                             data = data[:-1]
-                            exif[name] = [data]
+                            try:
+                                exif[name].append(data)
+                            except KeyError:
+                                exif[name] = [data]
                         elif type_format == 3:
                             if components > 2: 
                                 offset = struct.unpack(">L", data[0:4])[0]
@@ -137,18 +146,27 @@ def parse_exif(f):
                                 data = list(struct.unpack(">%dH" % components, f.read(components * 2)[0:components * 2]))
                                 f.seek(pos, 0)
                             else: data = list(struct.unpack(">%dH" % components, data[0:components * 2]))
-                            exif[name] = data
+                            try:
+                                exif[name].extend(data)
+                            except KeyError:
+                                exif[name] = data
                         elif type_format == 4:
                             data = struct.unpack(">L", data[0:4])[0]
-                            exif[name] = [data]
+                            try:
+                                exif[name].append(data)
+                            except KeyError:
+                                exif[name] = [data]
                         elif type_format == 5:
                             offset = struct.unpack(">L", data[0:4])[0]
                             pos = f.tell()
                             f.seek(exif_offset + offset, 0)
-                            (numerator, denominator) = struct.unpack(">%dL%dL" % (components, components), f.read(components * 8)[0:components * 8])
+                            (numerator, denominator) = struct.unpack(">LL", f.read(components * 8)[0:components * 8])
                             data = "%s/%s" % (numerator, denominator)
                             f.seek(pos, 0)
-                            exif[name] = [data[0:(len(numerator) + len(denominator))]]
+                            try:
+                                exif[name].append(data)
+                            except KeyError:
+                                exif[name] = [data]
                         elif type_format == 7:
                             if components > 4:
                                 offset = struct.unpack(">L", data[0:4])[0]
@@ -160,10 +178,10 @@ def parse_exif(f):
                             else:
                                 data = struct.unpack(">%dB" % components, data[0:components])
                                 data = "".join("%.2x" % x for x in data)
-                            exif[name] = [data]
-                    else: 
-                        data = None
-                        exif[name] = [data]
+                            try:
+                                exif[name].append(data)
+                            except KeyError:
+                                exif[name] = [data]
                 next_ifd = f.read(4)
                 if next_ifd == b'': raise ExifParseError("Invalid Exif")
                 else: 
@@ -194,10 +212,15 @@ def parse_exif(f):
                     if components == b'': raise ExifParseError("Invalid Exif")
                     components = struct.unpack("<L", components[0:4])[0]
                     data = f.read(4)
+                    if not skip and type_format in (6, 8, 9, 10, 11, 12):
+                        exif[name] = None
                     if components != 0 and type_format not in (6, 8, 9, 10, 11, 12) and not skip:
                         if type_format == 1:
                             data = struct.unpack("<B", data[0:1])[0]
-                            exif[name] = [data]
+                            try:
+                                exif[name].append(data)
+                            except KeyError:
+                                exif[name] = [data]
                         elif type_format == 2:
                             if components > 4:
                                 offset = struct.unpack("<L", data[0:4])[0]
@@ -207,7 +230,10 @@ def parse_exif(f):
                                 f.seek(pos, 0)
                             else: data = bytes.decode(data[0:components])
                             data = data[:-1]
-                            exif[name] = [data]
+                            try:
+                                exif[name].append(data)
+                            except KeyError:
+                                exif[name] = [data]
                         elif type_format == 3:
                             if components > 2: 
                                 offset = struct.unpack("<L", data[0:4])[0]
@@ -216,18 +242,27 @@ def parse_exif(f):
                                 data = list(struct.unpack("<%dH" % components, f.read(components * 2)[0:components * 2]))
                                 f.seek(pos, 0)
                             else: data = list(struct.unpack("<%dH" % components, data[0:components * 2]))
-                            exif[name] = data
+                            try:
+                                exif[name].extend(data)
+                            except KeyError:
+                                exif[name] = data
                         elif type_format == 4:
                             data = struct.unpack("<L", data[0:4])[0]
-                            exif[name] = [data]
+                            try:
+                                exif[name].append(data)
+                            except KeyError:
+                                exif[name] = [data]
                         elif type_format == 5:
                             offset = struct.unpack("<L", data[0:4])[0]
                             pos = f.tell()
                             f.seek(exif_offset + offset, 0)
-                            (numerator, denominator) = struct.unpack("<%dL%dL" % (components, components), f.read(components * 8)[0:components * 8])
+                            (numerator, denominator) = struct.unpack("<LL", f.read(components * 8)[0:components * 8])
                             data = "%s/%s" % (numerator, denominator)
                             f.seek(pos, 0)
-                            exif[name] = [data[0:(len(numerator) + len(denominator))]]
+                            try:
+                                exif[name].append(data)
+                            except KeyError:
+                                exif[name] = [data]
                         elif type_format == 7:
                             if components > 4:
                                 offset = struct.unpack("<L", data[0:4])[0]
@@ -239,10 +274,10 @@ def parse_exif(f):
                             else:
                                 data = struct.unpack("<%dB" % components, data[0:components]) 
                                 data = "".join("%.2x" % x for x in data)
-                            exif[name] = [data]
-                    else: 
-                        data = None
-                        exif[name] = data
+                            try:
+                                exif[name].append(data)
+                            except KeyError:
+                                exif[name] = [data]
                 next_ifd = f.read(4)
                 if next_ifd == b'': raise ExifParseError("Invalid Exif")
                 else: 
